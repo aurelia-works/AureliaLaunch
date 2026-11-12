@@ -1,0 +1,4 @@
+# rustc 1.93 links proc-macro dylibs that macOS 27 dyld rejects
+# ("mis-aligned LINKEDIT string pool"), which breaks `tauri build`. 1.99.1 is fine.
+[toolchain]
+channel = "1.99.1"

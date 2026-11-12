@@ -6,3 +6,4 @@ src-tauri/target/
 src-tauri/Wix/
 *.log
 .DS_Store
+src-tauri/gen/
