@@ -1,0 +1,9 @@
+[package]
+name = "aurelia-launch-platform-macos"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Native macOS backends for Aurelia Launch (Spotlight search, launching, system commands). std-only."
+
+[dependencies]
+aurelia-launch-core = { path = "../core" }

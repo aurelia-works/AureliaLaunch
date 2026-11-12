@@ -1,33 +1,22 @@
-use aurelia_launch_core::{query, Item, ItemKind, MemoryProvider, SearchProvider};
+use aurelia_launch_core::{query, Item, ItemKind};
+#[cfg(not(target_os = "macos"))]
+use aurelia_launch_core::{MemoryProvider, SearchProvider};
 use serde::Serialize;
 use tauri::{Manager, RunEvent, WindowEvent};
+use tauri_plugin_global_shortcut::ShortcutState;
 
-// Placeholder provider until the macOS Spotlight (MDQuery) backend lands.
-// Kept behind the SearchProvider trait so Windows/Linux backends slot in later.
-struct PlaceholderProviders;
-
-impl SearchProvider for PlaceholderProviders {
-    fn query(&self, input: &str, limit: usize) -> Vec<Item> {
-        let mem = MemoryProvider { entries: seed_entries() };
-        mem.query(input, limit)
-    }
-}
-
-fn seed_entries() -> Vec<Item> {
-    use aurelia_launch_core::ItemKind::*;
-    vec![
-        Item { title: "Terminal".into(), subtitle: "/System/Applications/Utilities".into(), score: 10, kind: App },
-        Item { title: "Safari".into(), subtitle: "/Applications".into(), score: 10, kind: App },
-        Item { title: "Finder".into(), subtitle: "/System/Library/CoreServices".into(), score: 10, kind: App },
-        Item { title: "AureliaHub".into(), subtitle: "sibling checkout".into(), score: 10, kind: App },
-    ]
-}
+// Toggle hotkey. Option+Space avoids fighting Spotlight (Cmd+Space)
+// and is reachable without moving your hands off home row.
+const TOGGLE_SHORTCUT: &str = "Alt+Space";
 
 /// Wire shape for the UI. Core stays serde-free; the shell owns serialization.
 #[derive(Serialize)]
 struct Hit {
     title: String,
     subtitle: String,
+    /// What acting on the row needs: path (App/File), value (Calc),
+    /// URL (WebSearch) or command id (SystemCommand).
+    target: String,
     kind: &'static str,
 }
 
@@ -41,12 +30,61 @@ fn kind_name(k: ItemKind) -> &'static str {
     }
 }
 
+fn to_hit(i: Item) -> Hit {
+    Hit {
+        title: i.title,
+        subtitle: i.subtitle,
+        target: i.target,
+        kind: kind_name(i.kind),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn backend_query(input: &str) -> Vec<Item> {
+    query(
+        input,
+        &aurelia_launch_platform_macos::MacOSProvider,
+    )
+}
+
+/// Non-macOS (and fallback): a few well-known entries so the UI stays usable.
+#[cfg(not(target_os = "macos"))]
+fn backend_query(input: &str) -> Vec<Item> {
+    let mem = MemoryProvider {
+        entries: vec![
+            Item {
+                title: "Terminal".into(),
+                subtitle: "fallback entry (native backend is macOS-only for now)".into(),
+                target: String::new(),
+                score: 10,
+                kind: ItemKind::App,
+            },
+        ],
+    };
+    query(input, &mem)
+}
+
 #[tauri::command]
 fn search(input: String) -> Vec<Hit> {
-    query(&input, &PlaceholderProviders)
-        .into_iter()
-        .map(|i| Hit { title: i.title, subtitle: i.subtitle, kind: kind_name(i.kind) })
-        .collect()
+    backend_query(&input).into_iter().map(to_hit).collect()
+}
+
+/// Open an app bundle or file with its default handler.
+#[tauri::command]
+fn launch(path: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    return aurelia_launch_platform_macos::launch(&path);
+    #[cfg(not(target_os = "macos"))]
+    return Err(format!("launching is macOS-only for now: {path}"));
+}
+
+/// Run a built-in system command by id (`lock`, `sleep`, ...).
+#[tauri::command]
+fn run_system(name: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    return aurelia_launch_platform_macos::run_system_command(&name);
+    #[cfg(not(target_os = "macos"))]
+    return Err(format!("system commands are macOS-only for now: {name}"));
 }
 
 /// Open an http(s) URL in the default browser. Other schemes are refused.
@@ -93,9 +131,37 @@ fn show_main(app: &tauri::AppHandle) {
     }
 }
 
+fn toggle_main(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        if w.is_visible().unwrap_or(false) {
+            let _ = w.hide();
+        } else {
+            show_main(app);
+        }
+    }
+}
+
 fn main() {
     let app = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![search, open_url, copy_text, hide_window])
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcut(TOGGLE_SHORTCUT)
+                .expect("toggle shortcut must parse")
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        toggle_main(app);
+                    }
+                })
+                .build(),
+        )
+        .invoke_handler(tauri::generate_handler![
+            search,
+            launch,
+            run_system,
+            open_url,
+            copy_text,
+            hide_window
+        ])
         .on_window_event(|window, event| {
             // Hide on blur: a hidden window does no layout or paint work.
             if let WindowEvent::Focused(false) = event {
@@ -103,7 +169,6 @@ fn main() {
             }
         })
         .setup(|app| {
-            // Until the global hotkey lands, show once at launch; Dock click re-shows.
             show_main(app.handle());
             Ok(())
         })
