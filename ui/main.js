@@ -40,6 +40,7 @@ function stub(cmd, args) {
   if (cmd === 'search') return Promise.resolve(stubSearch(args.input.trim()));
   if (cmd === 'copy_text') return navigator.clipboard?.writeText(args.text) ?? Promise.resolve();
   if (cmd === 'open_url') { window.open(args.url, '_blank', 'noopener'); return Promise.resolve(); }
+  if (cmd === 'launch' || cmd === 'run_system' || cmd === 'hide_window') return Promise.resolve();
   return Promise.resolve();
 }
 
@@ -202,15 +203,22 @@ async function hide() {
 async function activate(it) {
   try {
     if (it.kind === 'Calc') {
-      const value = it.title.replace(/^=\s*/, '');
+      const value = it.target || it.title.replace(/^=\s*/, '');
       await call('copy_text', { text: value });
       status(`Copied ${value}`);
       await hide();
     } else if (it.kind === 'WebSearch') {
-      await call('open_url', { url: it.subtitle });
+      await call('open_url', { url: it.target || it.subtitle });
+      await hide();
+    } else if (it.kind === 'App' || it.kind === 'File') {
+      if (!it.target) { status('Nothing to open for this row', true); return; }
+      await call('launch', { path: it.target });
+      await hide();
+    } else if (it.kind === 'SystemCommand') {
+      await call('run_system', { name: it.target || it.title });
       await hide();
     } else {
-      status('Launching lands with the macOS search backend (M2)', true);
+      status(`Unknown row kind: ${it.kind}`, true);
     }
   } catch (err) {
     status(`Failed: ${err}`, true);

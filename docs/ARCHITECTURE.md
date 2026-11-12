@@ -10,8 +10,16 @@ Alfred/Raycast-class launcher, open-source, idle-light (<50MB), macOS first.
   - macOS: Spotlight `MDQuery` / `NSMetadataQuery`, `/Applications` scan, Quick Look
   - Windows: Everything SDK / Start menu index (later)
   - Linux: `locate` / tracker / `.desktop` scan (later)
-- `src-tauri` — thin shell: global hotkey, show/hide window, `search` command,
-  open/copy actions, hide-on-blur. No ranking logic here.
+- `crates/platform-macos` — native macOS backends, std-only. `MacOSProvider`
+  implements `SearchProvider`: apps via directory scan
+  (`/Applications`, `~/Applications`, `/System/Applications`, ...),
+  files via the Spotlight index (`mdfind -name`, system noise filtered).
+  Also owns `launch` (`open`) and `run_system_command`
+  (`CGSession`/`pmset`/`osascript`). Covered by its own unit tests.
+- `src-tauri` — thin shell: global hotkey (Option+Space via
+  `tauri-plugin-global-shortcut`, toggles show/hide), `search`/`launch`/
+  `run_system`/`open_url`/`copy_text`/`hide_window` commands,
+  hide-on-blur. No ranking logic here.
 - `ui` — static, framework-free. Event-driven only: no `setInterval`/`requestAnimationFrame`
   loops, max 20 DOM rows. Idle cost must be ~zero when hidden.
 

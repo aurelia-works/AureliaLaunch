@@ -5,10 +5,16 @@
 use std::cmp::Ordering;
 
 /// A ranked launchable result.
+///
+/// `target` is what acting on the item needs: a filesystem path for
+/// App/File, the expression value for Calc, the URL for WebSearch,
+/// or the command id for SystemCommand. Display text stays in
+/// `title`/`subtitle` so ranking and rendering never parse paths.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Item {
     pub title: String,
     pub subtitle: String,
+    pub target: String,
     pub score: i32,
     pub kind: ItemKind,
 }
@@ -211,7 +217,8 @@ pub fn web_search_items(input: &str) -> Vec<Item> {
     };
     vec![Item {
         title: format!("Search {prefix}: {rest}"),
-        subtitle: url,
+        subtitle: url.clone(),
+        target: url,
         score: 0,
         kind: ItemKind::WebSearch,
     }]
@@ -246,6 +253,7 @@ pub fn system_commands(input: &str) -> Vec<Item> {
         .map(|(name, desc)| Item {
             title: name.to_string(),
             subtitle: desc.to_string(),
+            target: name.to_string(),
             score: 0,
             kind: ItemKind::SystemCommand,
         })
@@ -260,9 +268,11 @@ pub fn query(input: &str, provider: &dyn SearchProvider) -> Vec<Item> {
     }
     let mut items = provider.query(input, 8);
     if let Some(v) = try_calc(input) {
+        let value = format!("{v}");
         items.push(Item {
-            title: format!("= {v}"),
+            title: format!("= {value}"),
             subtitle: "Calculator — Enter to copy".into(),
+            target: value,
             score: 90,
             kind: ItemKind::Calc,
         });
@@ -303,12 +313,14 @@ mod tests {
             Item {
                 title: "Terminal Guide".into(),
                 subtitle: "".into(),
+                target: "/Docs/Terminal Guide.md".into(),
                 score: 0,
                 kind: ItemKind::File,
             },
             Item {
                 title: "Terminal".into(),
                 subtitle: "".into(),
+                target: "/System/Applications/Utilities/Terminal.app".into(),
                 score: 0,
                 kind: ItemKind::App,
             },
@@ -323,6 +335,7 @@ mod tests {
             entries: vec![Item {
                 title: "Terminal".into(),
                 subtitle: "/Apps".into(),
+                target: "/System/Applications/Utilities/Terminal.app".into(),
                 score: 0,
                 kind: ItemKind::App,
             }],

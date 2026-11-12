@@ -10,9 +10,13 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["macos-private-api"] }
+tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 aurelia-launch-core = { path = "../crates/core" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+aurelia-launch-platform-macos = { path = "../crates/platform-macos" }
 
 [features]
 default = ["custom-protocol"]
