@@ -1,0 +1,10 @@
+[package]
+name = "aurelia-launch-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure Rust search/calc/actions core for Aurelia Launch. No UI, no Tauri."
+
+[dependencies]
+
+[dev-dependencies]

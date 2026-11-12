@@ -1,0 +1,12 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  core:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p aurelia-launch-core
+      - run: bash scripts/budget.sh
+      - run: cargo tree -p aurelia-launch-core --depth 1

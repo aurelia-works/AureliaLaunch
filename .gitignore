@@ -1,0 +1,8 @@
+/target
+/target/
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/Wix/
+*.log
+.DS_Store

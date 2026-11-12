@@ -1,0 +1,19 @@
+[package]
+name = "aurelia-launch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Aurelia Launch Tauri shell (macOS first). Thin UI host over aurelia-launch-core."
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+aurelia-launch-core = { path = "../crates/core" }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

@@ -1,0 +1,9 @@
+:root { color-scheme: dark; }
+body { margin: 0; font: 14px/1.4 -apple-system, sans-serif; background: transparent; }
+#panel { background: rgba(28,28,32,.96); border-radius: 12px; overflow: hidden; border: 1px solid #444; }
+#q { width: 100%; box-sizing: border-box; padding: 14px 16px; font-size: 18px; background: transparent; border: 0; color: #fff; outline: none; }
+#results { list-style: none; margin: 0; padding: 4px; max-height: 300px; overflow: auto; }
+#results li { padding: 8px 12px; border-radius: 8px; color: #eee; display: flex; justify-content: space-between; gap: 12px; }
+#results li.sel { background: #3a6df0; color: #fff; }
+#results small { opacity: .7; }
+#hint { padding: 6px 12px; font-size: 11px; color: #999; border-top: 1px solid #333; }
